@@ -391,6 +391,28 @@
   .modal-note { font-size: 11.5px; }
   .modal-note .mono { font-family: var(--font-mono); }
   .modal p .mono { font-family: var(--font-mono); background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .provider-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .provider-btn {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .provider-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--text);
+    font-weight: 600;
+  }
   .cmd-block {
     font-family: var(--font-mono);
     font-size: 12.5px;
@@ -461,7 +483,7 @@
         <h1>Conversation</h1>
       </div>
       <div class="header-actions">
-        <span class="model-tag">claude-sonnet-4-6</span>
+        <span class="model-tag" id="modelTag">claude-sonnet-4-6</span>
         <button class="icon-btn" id="keyBtn" title="APIキーを設定">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
         </button>
@@ -506,9 +528,13 @@
   <div class="modal-overlay" id="keyOverlay">
     <div class="modal">
       <h3>APIキーを設定</h3>
-      <p>このアプリをブラウザから直接動かすには、あなた自身のAnthropic APIキーが必要です。キーはこの端末のブラウザ内にのみ保存され、Anthropic以外には送信されません。</p>
+      <p>このアプリをブラウザから直接動かすには、あなた自身のAPIキーが必要です。キーはこの端末のブラウザ内にのみ保存され、選んだ提供元以外には送信されません。</p>
+      <div class="provider-toggle" id="providerToggle">
+        <button type="button" class="provider-btn" data-provider="anthropic">Claude (Anthropic)</button>
+        <button type="button" class="provider-btn" data-provider="gemini">Gemini (Google)</button>
+      </div>
       <input type="password" id="keyInput" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
-      <p class="modal-note">開発者ツールを開けば読み取れる状態で保存されます。共有PCや配布用のファイルには入力しないでください。キーは <span class="mono">console.anthropic.com</span> の Settings → API Keys から発行できます。</p>
+      <p class="modal-note" id="keyHelpNote">開発者ツールを開けば読み取れる状態で保存されます。共有PCや配布用のファイルには入力しないでください。キーは <span class="mono">console.anthropic.com</span> の Settings → API Keys から発行できます。</p>
       <div class="modal-actions">
         <button class="btn-ghost" id="keyClearBtn">保存済みキーを削除</button>
         <button class="btn-primary" id="keySaveBtn">保存して閉じる</button>
@@ -543,7 +569,6 @@
   let conversation = []; // {role: 'user'|'assistant', content: string}
   let isLoading = false;
 
-  const KEY_STORAGE = 'claude_chat_byok_key';
   const keyOverlay = document.getElementById('keyOverlay');
   const keyInput = document.getElementById('keyInput');
   const keyBtn = document.getElementById('keyBtn');
@@ -562,9 +587,53 @@
   fileProtoDismiss.addEventListener('click', () => fileProtoOverlay.classList.remove('open'));
   fileProtoClose.addEventListener('click', () => fileProtoOverlay.classList.remove('open'));
 
-  function getApiKey() {
-    return localStorage.getItem(KEY_STORAGE) || '';
+  const PROVIDER_STORAGE = 'claude_chat_provider';
+  const KEY_STORAGE_PREFIX = 'claude_chat_byok_key_'; // + provider
+  const providerToggle = document.getElementById('providerToggle');
+  const providerBtns = Array.from(document.querySelectorAll('.provider-btn'));
+  const keyHelpNote = document.getElementById('keyHelpNote');
+
+  const PROVIDER_INFO = {
+    anthropic: {
+      label: 'Claude (Anthropic)',
+      placeholder: 'sk-ant-api03-...',
+      help: '開発者ツールを開けば読み取れる状態で保存されます。共有PCや配布用のファイルには入力しないでください。キーは <span class="mono">console.anthropic.com</span> の Settings → API Keys から発行できます。'
+    },
+    gemini: {
+      label: 'Gemini (Google)',
+      placeholder: 'AIza...',
+      help: '開発者ツールを開けば読み取れる状態で保存されます。共有PCや配布用のファイルには入力しないでください。キーは <span class="mono">aistudio.google.com</span> の Get API Key から発行できます(無料枠あり)。'
+    }
+  };
+
+  function getProvider() {
+    return localStorage.getItem(PROVIDER_STORAGE) || 'anthropic';
   }
+  function setProvider(p) {
+    localStorage.setItem(PROVIDER_STORAGE, p);
+  }
+  function getApiKey(provider = getProvider()) {
+    return localStorage.getItem(KEY_STORAGE_PREFIX + provider) || '';
+  }
+  function setApiKey(provider, val) {
+    localStorage.setItem(KEY_STORAGE_PREFIX + provider, val);
+  }
+
+  function applyProviderToUI(provider) {
+    providerBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.provider === provider));
+    const info = PROVIDER_INFO[provider];
+    keyInput.placeholder = info.placeholder;
+    keyHelpNote.innerHTML = info.help;
+    keyInput.value = getApiKey(provider);
+  }
+
+  providerBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyProviderToUI(btn.dataset.provider);
+    });
+  });
+
+  const MODEL_TAG_TEXT = { anthropic: 'claude-sonnet-4-6', gemini: 'gemini-2.5-flash' };
 
   function refreshKeyState() {
     const hasKey = !!getApiKey();
@@ -572,10 +641,11 @@
     sendBtn.disabled = !hasKey;
     input.disabled = !hasKey;
     input.placeholder = hasKey ? 'メッセージを入力…' : '先にAPIキーを設定してください';
+    document.getElementById('modelTag').textContent = MODEL_TAG_TEXT[getProvider()];
   }
 
   function openKeyModal() {
-    keyInput.value = getApiKey();
+    applyProviderToUI(getProvider());
     keyOverlay.classList.add('open');
     keyInput.focus();
   }
@@ -586,15 +656,20 @@
   keyOverlay.addEventListener('click', (e) => { if (e.target === keyOverlay) closeKeyModal(); });
 
   keySaveBtn.addEventListener('click', () => {
+    const activeBtn = providerBtns.find(b => b.classList.contains('active'));
+    const provider = activeBtn ? activeBtn.dataset.provider : 'anthropic';
     const val = keyInput.value.trim();
-    if (val) localStorage.setItem(KEY_STORAGE, val);
+    setProvider(provider);
+    if (val) setApiKey(provider, val);
     closeKeyModal();
     refreshKeyState();
     input.focus();
   });
 
   keyClearBtn.addEventListener('click', () => {
-    localStorage.removeItem(KEY_STORAGE);
+    const activeBtn = providerBtns.find(b => b.classList.contains('active'));
+    const provider = activeBtn ? activeBtn.dataset.provider : getProvider();
+    localStorage.removeItem(KEY_STORAGE_PREFIX + provider);
     keyInput.value = '';
     refreshKeyState();
   });
@@ -653,14 +728,7 @@
     scrollToBottom();
   }
 
-  async function callClaude(messages) {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      const e = new Error('APIキー未設定');
-      e.code = 'NO_KEY';
-      throw e;
-    }
-
+  async function callAnthropic(apiKey, messages) {
     let response;
     try {
       response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -678,7 +746,6 @@
         })
       });
     } catch (networkErr) {
-      // fetch自体が失敗 = 実際のネットワーク障害 or CORSでブロックされた
       const e = new Error(networkErr.message || 'ネットワークエラー');
       e.code = 'NETWORK';
       e.detail = String(networkErr.stack || networkErr);
@@ -686,27 +753,70 @@
     }
 
     if (!response.ok) {
-      let bodyText = '';
-      let parsed = null;
-      try {
-        bodyText = await response.text();
-        parsed = JSON.parse(bodyText);
-      } catch (_) { /* JSONでなければそのままテキストを使う */ }
-
+      let bodyText = '', parsed = null;
+      try { bodyText = await response.text(); parsed = JSON.parse(bodyText); } catch (_) {}
       const apiMsg = (parsed && parsed.error && parsed.error.message) || bodyText || `HTTP ${response.status}`;
       const e = new Error(apiMsg);
       e.code = response.status === 401 ? 'AUTH' : 'API_ERROR';
       e.status = response.status;
-      e.detail = JSON.stringify(
-        { status: response.status, statusText: response.statusText, body: parsed || bodyText },
-        null, 2
-      );
+      e.detail = JSON.stringify({ status: response.status, statusText: response.statusText, body: parsed || bodyText }, null, 2);
       throw e;
     }
 
     const data = await response.json();
     const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
     return textBlocks.join('\n').trim() || '応答が空でした。もう一度お試しください。';
+  }
+
+  async function callGemini(apiKey, messages) {
+    const contents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    let response;
+    try {
+      response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify({ contents })
+      });
+    } catch (networkErr) {
+      const e = new Error(networkErr.message || 'ネットワークエラー');
+      e.code = 'NETWORK';
+      e.detail = String(networkErr.stack || networkErr);
+      throw e;
+    }
+
+    if (!response.ok) {
+      let bodyText = '', parsed = null;
+      try { bodyText = await response.text(); parsed = JSON.parse(bodyText); } catch (_) {}
+      const apiMsg = (parsed && parsed.error && parsed.error.message) || bodyText || `HTTP ${response.status}`;
+      const e = new Error(apiMsg);
+      e.code = (response.status === 401 || response.status === 403) ? 'AUTH' : 'API_ERROR';
+      e.status = response.status;
+      e.detail = JSON.stringify({ status: response.status, statusText: response.statusText, body: parsed || bodyText }, null, 2);
+      throw e;
+    }
+
+    const data = await response.json();
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = parts.map(p => p.text || '').join('');
+    return text.trim() || '応答が空でした。もう一度お試しください。';
+  }
+
+  async function callModel(messages) {
+    const provider = getProvider();
+    const apiKey = getApiKey(provider);
+    if (!apiKey) {
+      const e = new Error('APIキー未設定');
+      e.code = 'NO_KEY';
+      throw e;
+    }
+    return provider === 'gemini' ? callGemini(apiKey, messages) : callAnthropic(apiKey, messages);
   }
 
   function autoResize() {
@@ -727,7 +837,7 @@
     setThinking(true);
 
     try {
-      const reply = await callClaude(conversation);
+      const reply = await callModel(conversation);
       setThinking(false);
       conversation.push({ role: 'assistant', content: reply });
       renderMessages();
