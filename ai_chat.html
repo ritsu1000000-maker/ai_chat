@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Conversation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --text: #14171A;
+    --text-muted: #6B7280;
+    --accent: #3454D1;
+    --accent-soft: #E8ECFB;
+    --border: #E2E4E9;
+    --danger: #B3261E;
+    --danger-soft: #FBEAEA;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 720px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    display: inline-block;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  .brand h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 19px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .model-tag {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    padding: 6px;
+    border-radius: 8px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--bg); }
+
+  .chat-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 24px;
+  }
+
+  .empty-state {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 22px;
+    padding: 0 20px;
+  }
+
+  .empty-state .glyph {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--accent);
+    transform: rotate(45deg);
+    opacity: 0.9;
+  }
+
+  .empty-state h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0;
+    color: var(--text);
+  }
+
+  .empty-state p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: -10px 0 0;
+    max-width: 340px;
+    line-height: 1.6;
+  }
+
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 420px;
+  }
+
+  .chip {
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 9px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+  .message {
+    margin-bottom: 26px;
+    display: flex;
+  }
+
+  .message.user { justify-content: flex-end; }
+  .message.assistant { justify-content: flex-start; }
+
+  .bubble-user {
+    background: var(--accent-soft);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border-bottom-right-radius: 4px;
+    max-width: 78%;
+    font-size: 14.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  .assistant-block {
+    max-width: 84%;
+    border-left: 2px solid var(--accent);
+    padding-left: 14px;
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+
+  .assistant-block p { margin: 0 0 10px; }
+  .assistant-block p:last-child { margin-bottom: 0; }
+  .assistant-block code {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .assistant-block pre {
+    background: var(--text);
+    color: var(--surface);
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin: 10px 0;
+  }
+  .assistant-block pre code { background: none; padding: 0; color: inherit; }
+  .assistant-block strong { font-weight: 600; }
+
+  .thinking {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 2px solid var(--accent);
+    padding-left: 14px;
+    height: 20px;
+  }
+  .thinking .cursor {
+    width: 2px;
+    height: 14px;
+    background: var(--accent);
+    animation: blink 1s step-start infinite;
+  }
+  .thinking span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .error-block {
+    border-left: 2px solid var(--danger);
+    background: var(--danger-soft);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13.5px;
+    color: var(--danger);
+    max-width: 84%;
+  }
+  .error-block details {
+    margin-top: 8px;
+  }
+  .error-block summary {
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--danger);
+    opacity: 0.8;
+  }
+  .error-block pre {
+    margin: 8px 0 0;
+    background: rgba(179, 38, 30, 0.08);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+  }
+
+  .composer {
+    border-top: 1px solid var(--border);
+    padding: 16px 24px 20px;
+    flex-shrink: 0;
+  }
+
+  .composer-inner {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 8px 8px 8px 16px;
+    transition: border-color 0.15s;
+  }
+  .composer-inner:focus-within { border-color: var(--accent); }
+
+  textarea {
+    flex: 1;
+    border: none;
+    background: none;
+    resize: none;
+    outline: none;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--text);
+    max-height: 160px;
+    padding: 8px 0;
+  }
+  textarea::placeholder { color: var(--text-muted); }
+
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .send-btn:hover { opacity: 0.88; }
+  .send-btn:active { transform: scale(0.94); }
+  .send-btn:disabled { opacity: 0.35; cursor: default; }
+
+  .hint {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .chat-scroll::-webkit-scrollbar { width: 8px; }
+  .chat-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .thinking .cursor { animation: none; opacity: 0.6; }
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 23, 26, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 26px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(20, 23, 26, 0.2);
+  }
+  .modal h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0 0 10px;
+  }
+  .modal p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0 0 14px;
+  }
+  .modal input {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    margin-bottom: 12px;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-note { font-size: 11.5px; }
+  .modal-note .mono { font-family: var(--font-mono); }
+  .modal p .mono { font-family: var(--font-mono); background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .cmd-block {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    background: var(--text);
+    color: var(--surface);
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 0 0 12px;
+    overflow-x: auto;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-ghost {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 6px 4px;
+  }
+  .btn-ghost:hover { color: var(--danger); }
+
+  .key-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .key-banner.show { display: flex; }
+  .key-banner button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <h1>Conversation</h1>
+      </div>
+      <div class="header-actions">
+        <span class="model-tag">claude-sonnet-4-6</span>
+        <button class="icon-btn" id="keyBtn" title="APIキーを設定">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+        </button>
+        <button class="icon-btn" id="resetBtn" title="会話をリセット">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="chat-scroll" id="chatScroll">
+      <div class="empty-state" id="emptyState">
+        <div class="glyph"></div>
+        <h2>会話を始めましょう</h2>
+        <p>何でも聞いてください。考えを整理する相手にも、手を動かす相棒にもなります。</p>
+        <div class="suggestions">
+          <button class="chip" data-text="最近考えていることを壁打ちしたい">壁打ちに付き合ってほしい</button>
+          <button class="chip" data-text="この文章を推敲してください：">文章を推敲してほしい</button>
+          <button class="chip" data-text="次のコードをレビューしてください：">コードをレビューしてほしい</button>
+        </div>
+      </div>
+      <div id="messages"></div>
+    </div>
+
+    <div class="composer">
+      <div class="key-banner" id="keyBanner">
+        <span>APIキーが未設定です。設定するとチャットできます。</span>
+        <button id="keyBannerBtn">キーを設定</button>
+      </div>
+      <div class="key-banner" id="fileProtoBanner" style="background:var(--danger-soft); border-color:var(--danger);">
+        <span>このファイルを直接開いているため通信がブロックされます。下の手順でローカルサーバー経由で開いてください。</span>
+      </div>
+      <div class="composer-inner">
+        <textarea id="input" placeholder="メッセージを入力…" rows="1"></textarea>
+        <button class="send-btn" id="sendBtn" title="送信">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
+        </button>
+      </div>
+      <div class="hint">Enterで送信 · Shift+Enterで改行</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="keyOverlay">
+    <div class="modal">
+      <h3>APIキーを設定</h3>
+      <p>このアプリをブラウザから直接動かすには、あなた自身のAnthropic APIキーが必要です。キーはこの端末のブラウザ内にのみ保存され、Anthropic以外には送信されません。</p>
+      <input type="password" id="keyInput" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
+      <p class="modal-note">開発者ツールを開けば読み取れる状態で保存されます。共有PCや配布用のファイルには入力しないでください。キーは <span class="mono">console.anthropic.com</span> の Settings → API Keys から発行できます。</p>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="keyClearBtn">保存済みキーを削除</button>
+        <button class="btn-primary" id="keySaveBtn">保存して閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="fileProtoOverlay">
+    <div class="modal">
+      <h3>開き方を変える必要があります</h3>
+      <p>このファイルを<span class="mono">file://</span>として直接開くと、ブラウザの制約でAnthropic APIへの通信がブロックされます(APIキーが正しくても失敗します)。ローカルの簡易サーバー経由で開けば解決します。</p>
+      <p style="margin-bottom:6px;">ターミナル(コマンドプロンプト)でこのファイルがあるフォルダに移動して、次のいずれかを実行してください:</p>
+      <pre class="cmd-block">python3 -m http.server 8000</pre>
+      <p style="margin:-6px 0 14px;">Pythonがなければ:</p>
+      <pre class="cmd-block">npx serve .</pre>
+      <p style="margin-bottom:14px;">実行したら、ブラウザで <span class="mono">http://localhost:8000/ai_chat.html</span>(または表示されたURL)を開いてください。ファイルをダブルクリックする方法では動きません。</p>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="fileProtoDismiss">それでも続ける</button>
+        <button class="btn-primary" id="fileProtoClose">分かった</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const messagesEl = document.getElementById('messages');
+  const emptyState = document.getElementById('emptyState');
+  const chatScroll = document.getElementById('chatScroll');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let conversation = []; // {role: 'user'|'assistant', content: string}
+  let isLoading = false;
+
+  const KEY_STORAGE = 'claude_chat_byok_key';
+  const keyOverlay = document.getElementById('keyOverlay');
+  const keyInput = document.getElementById('keyInput');
+  const keyBtn = document.getElementById('keyBtn');
+  const keySaveBtn = document.getElementById('keySaveBtn');
+  const keyClearBtn = document.getElementById('keyClearBtn');
+  const keyBanner = document.getElementById('keyBanner');
+  const keyBannerBtn = document.getElementById('keyBannerBtn');
+  const fileProtoBanner = document.getElementById('fileProtoBanner');
+  const fileProtoOverlay = document.getElementById('fileProtoOverlay');
+  const fileProtoDismiss = document.getElementById('fileProtoDismiss');
+  const fileProtoClose = document.getElementById('fileProtoClose');
+
+  const isFileProtocol = window.location.protocol === 'file:';
+  fileProtoBanner.classList.toggle('show', isFileProtocol);
+
+  fileProtoDismiss.addEventListener('click', () => fileProtoOverlay.classList.remove('open'));
+  fileProtoClose.addEventListener('click', () => fileProtoOverlay.classList.remove('open'));
+
+  function getApiKey() {
+    return localStorage.getItem(KEY_STORAGE) || '';
+  }
+
+  function refreshKeyState() {
+    const hasKey = !!getApiKey();
+    keyBanner.classList.toggle('show', !hasKey);
+    sendBtn.disabled = !hasKey;
+    input.disabled = !hasKey;
+    input.placeholder = hasKey ? 'メッセージを入力…' : '先にAPIキーを設定してください';
+  }
+
+  function openKeyModal() {
+    keyInput.value = getApiKey();
+    keyOverlay.classList.add('open');
+    keyInput.focus();
+  }
+  function closeKeyModal() { keyOverlay.classList.remove('open'); }
+
+  keyBtn.addEventListener('click', openKeyModal);
+  keyBannerBtn.addEventListener('click', openKeyModal);
+  keyOverlay.addEventListener('click', (e) => { if (e.target === keyOverlay) closeKeyModal(); });
+
+  keySaveBtn.addEventListener('click', () => {
+    const val = keyInput.value.trim();
+    if (val) localStorage.setItem(KEY_STORAGE, val);
+    closeKeyModal();
+    refreshKeyState();
+    input.focus();
+  });
+
+  keyClearBtn.addEventListener('click', () => {
+    localStorage.removeItem(KEY_STORAGE);
+    keyInput.value = '';
+    refreshKeyState();
+  });
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatAssistant(text) {
+    let escaped = escapeHtml(text);
+    escaped = escaped.replace(/```([\s\S]*?)```/g, (m, code) => `<pre><code>${code.trim()}</code></pre>`);
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    const paragraphs = escaped.split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+    return paragraphs;
+  }
+
+  function scrollToBottom() {
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }
+
+  function renderMessages() {
+    emptyState.style.display = conversation.length === 0 ? 'flex' : 'none';
+    messagesEl.innerHTML = conversation.map(msg => {
+      if (msg.role === 'user') {
+        return `<div class="message user"><div class="bubble-user">${escapeHtml(msg.content)}</div></div>`;
+      }
+      return `<div class="message assistant"><div class="assistant-block">${formatAssistant(msg.content)}</div></div>`;
+    }).join('');
+    scrollToBottom();
+  }
+
+  function setThinking(on) {
+    const existing = document.getElementById('thinkingRow');
+    if (existing) existing.remove();
+    if (on) {
+      const row = document.createElement('div');
+      row.className = 'message assistant';
+      row.id = 'thinkingRow';
+      row.innerHTML = `<div class="thinking"><span class="cursor"></span><span>考えています</span></div>`;
+      messagesEl.appendChild(row);
+      scrollToBottom();
+    }
+  }
+
+  function showError(text, detail) {
+    const row = document.createElement('div');
+    row.className = 'message assistant';
+    const detailHtml = detail
+      ? `<details><summary>詳細(JSON)</summary><pre>${escapeHtml(detail)}</pre></details>`
+      : '';
+    row.innerHTML = `<div class="error-block">${escapeHtml(text)}${detailHtml}</div>`;
+    messagesEl.appendChild(row);
+    scrollToBottom();
+  }
+
+  async function callClaude(messages) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      const e = new Error('APIキー未設定');
+      e.code = 'NO_KEY';
+      throw e;
+    }
+
+    let response;
+    try {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: messages.map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+    } catch (networkErr) {
+      // fetch自体が失敗 = 実際のネットワーク障害 or CORSでブロックされた
+      const e = new Error(networkErr.message || 'ネットワークエラー');
+      e.code = 'NETWORK';
+      e.detail = String(networkErr.stack || networkErr);
+      throw e;
+    }
+
+    if (!response.ok) {
+      let bodyText = '';
+      let parsed = null;
+      try {
+        bodyText = await response.text();
+        parsed = JSON.parse(bodyText);
+      } catch (_) { /* JSONでなければそのままテキストを使う */ }
+
+      const apiMsg = (parsed && parsed.error && parsed.error.message) || bodyText || `HTTP ${response.status}`;
+      const e = new Error(apiMsg);
+      e.code = response.status === 401 ? 'AUTH' : 'API_ERROR';
+      e.status = response.status;
+      e.detail = JSON.stringify(
+        { status: response.status, statusText: response.statusText, body: parsed || bodyText },
+        null, 2
+      );
+      throw e;
+    }
+
+    const data = await response.json();
+    const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
+    return textBlocks.join('\n').trim() || '応答が空でした。もう一度お試しください。';
+  }
+
+  function autoResize() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  }
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+
+    conversation.push({ role: 'user', content: text });
+    renderMessages();
+    input.value = '';
+    autoResize();
+    isLoading = true;
+    sendBtn.disabled = true;
+    setThinking(true);
+
+    try {
+      const reply = await callClaude(conversation);
+      setThinking(false);
+      conversation.push({ role: 'assistant', content: reply });
+      renderMessages();
+    } catch (err) {
+      setThinking(false);
+      conversation.pop(); // 失敗したやり取りは履歴(API送信対象)に残さない
+      renderMessages();
+      input.value = text; // 書いた内容は失わずに戻す
+      autoResize();
+
+      if (err.code === 'NO_KEY') {
+        showError('APIキーが設定されていません。右上の鍵アイコンから設定してください。');
+        openKeyModal();
+      } else if (err.code === 'AUTH') {
+        showError('APIキーが無効か権限がありません。console.anthropic.comで確認し、設定し直してください。', err.detail);
+        openKeyModal();
+      } else if (err.code === 'NETWORK') {
+        if (isFileProtocol) {
+          showError('通信がブロックされました。file://で直接開いているのが原因です。上部の案内に従い、ローカルサーバー経由で開き直してください。');
+          fileProtoOverlay.classList.add('open');
+        } else {
+          showError('ブラウザからAPIに接続できませんでした(CORSまたはネットワークの問題の可能性があります)。', err.detail);
+        }
+      } else if (err.code === 'API_ERROR') {
+        showError(`APIがエラーを返しました(status: ${err.status})`, err.detail);
+      } else {
+        showError('予期しないエラーが発生しました。', String(err.stack || err));
+      }
+    } finally {
+      isLoading = false;
+      refreshKeyState();
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+  input.addEventListener('input', autoResize);
+
+  resetBtn.addEventListener('click', () => {
+    conversation = [];
+    renderMessages();
+  });
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      input.value = chip.dataset.text;
+      autoResize();
+      input.focus();
+    });
+  });
+
+  renderMessages();
+  refreshKeyState();
+  if (isFileProtocol) {
+    fileProtoOverlay.classList.add('open');
+  } else if (!getApiKey()) {
+    openKeyModal();
+  }
+</script>
+</body>
+</html>
