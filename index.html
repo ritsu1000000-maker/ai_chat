@@ -633,7 +633,7 @@
     });
   });
 
-  const MODEL_TAG_TEXT = { anthropic: 'claude-sonnet-4-6', gemini: 'gemini-2.5-flash' };
+  const MODEL_TAG_TEXT = { anthropic: 'claude-sonnet-4-6', gemini: 'gemini-flash-latest' };
 
   function refreshKeyState() {
     const hasKey = !!getApiKey();
@@ -786,7 +786,7 @@
 
     let response;
     try {
-      response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+      response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
