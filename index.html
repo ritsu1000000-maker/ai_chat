@@ -655,10 +655,20 @@
   keyBannerBtn.addEventListener('click', openKeyModal);
   keyOverlay.addEventListener('click', (e) => { if (e.target === keyOverlay) closeKeyModal(); });
 
+  function detectProviderFromKey(val) {
+    if (/^sk-ant-/i.test(val)) return 'anthropic';
+    if (/^AIza/.test(val)) return 'gemini';
+    return null; // 判定できない場合はnull
+  }
+
   keySaveBtn.addEventListener('click', () => {
     const activeBtn = providerBtns.find(b => b.classList.contains('active'));
-    const provider = activeBtn ? activeBtn.dataset.provider : 'anthropic';
+    const selectedProvider = activeBtn ? activeBtn.dataset.provider : 'anthropic';
     const val = keyInput.value.trim();
+    const detected = val ? detectProviderFromKey(val) : null;
+    // キーの形式で判定できればそれを優先し、選び忘れによる誤送信を防ぐ
+    const provider = detected || selectedProvider;
+
     setProvider(provider);
     if (val) setApiKey(provider, val);
     closeKeyModal();
