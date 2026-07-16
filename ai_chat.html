@@ -646,7 +646,7 @@
     const row = document.createElement('div');
     row.className = 'message assistant';
     const detailHtml = detail
-      ? `<details><summary>詳細(JSON)</summary><pre>${escapeHtml(detail)}</pre></details>`
+      ? `<details open><summary>詳細(JSON)</summary><pre>${escapeHtml(detail)}</pre></details>`
       : '';
     row.innerHTML = `<div class="error-block">${escapeHtml(text)}${detailHtml}</div>`;
     messagesEl.appendChild(row);
